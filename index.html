@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Солнечная система</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            color: #fff;
+        }
+        
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        canvas {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 100, 255, 0.3);
+            margin: 0 auto;
+            cursor: move;
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            margin-bottom: 20px;
+            color: #aaa;
+            font-size: 16px;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        button {
+            background: #1a1a2e;
+            color: #fff;
+            border: 1px solid #4cc9f0;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #4cc9f0;
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 201, 240, 0.4);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(26, 26, 46, 0.7);
+            padding: 8px 15px;
+            border-radius: 30px;
+            border: 1px solid #4cc9f0;
+        }
+        
+        .slider-container label {
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
+        input[type="range"] {
+            width: 100px;
+        }
+        
+        .info {
+            color: #aaa;
+            margin-top: 15px;
+            font-size: 14px;
+            max-width: 800px;
+            margin: 15px auto;
+            line-height: 1.5;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            color: #ddd;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .scale-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #4cc9f0;
+        }
+        
+        .instructions {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Солнечная система</h1>
+        <div class="subtitle">Все планеты на своих орбитах</div>
+        <canvas id="solarSystem" width="1100" height="500"></canvas>
+        
+        <div class="controls">
+            <button id="speedUp">Ускорить</button>
+            <button id="speedDown">Замедлить</button>
+            <button id="toggleOrbits">Траектории: Вкл</button>
+            <button id="toggleLabels">Названия: Вкл</button>
+            <button id="resetView">Сброс масштаба</button>
+            <div class="slider-container">
+                <label for="orbitBrightness">Яркость траекторий:</label>
+                <input type="range" id="orbitBrightness" min="1" max="10" value="3">
+            </div>
+        </div>
+        
+        <div class="scale-info" id="scaleInfo">Скорость: 0.5x</div>
+        <div class="instructions">Используйте колесо мыши для масштабирования. Перетаскивайте для перемещения.</div>
+        
+        <div class="info">
+            Все планеты и их спутники вращаются по своим орбитам. 
+            Для лучшей визуализации масштаб расстояний и размеров адаптирован.
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background: #FFD700;"></div>Солнце</div>
+            <div class="legend-item"><div class="legend-color" style="background: #B0B0B0;"></div>Меркурий</div>
+            <div class="legend-item"><div class="legend-color" style="background: #E6BC73;"></div>Венера</div>
+            <div class="legend-item"><div class="legend-color" style="background: #6B93D6;"></div>Земля</div>
+            <div class="legend-item"><div class="legend-color" style="background: #C1440E;"></div>Марс</div>
+            <div class="legend-item"><div class="legend-color" style="background: #D8CA9D;"></div>Юпитер</div>
+            <div class="legend-item"><div class="legend-color" style="background: #C5AB6E;"></div>Сатурн</div>
+            <div class="legend-item"><div class="legend-color" style="background: #D1E7E7;"></div>Уран</div>
+            <div class="legend-item"><div class="legend-color" style="background: #5B5DDF;"></div>Нептун</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('solarSystem');
+        const ctx = canvas.getContext('2d');
+        
+        // Центр холста
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // Параметры анимации
+        let animationSpeed = 0.5; // В 2 раза медленнее
+        let showOrbits = true;
+        let showLabels = true;
+        let orbitBrightness = 3; // Яркость траекторий (1-10)
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        
+        // Планеты с адаптированными параметрами для отображения
+        const planets = [
+            { 
+                name: "Солнце", 
+                radius: 25, 
+                distance: 0, 
+                angle: 0, 
+                speed: 0, 
+                color: "#FFD700",
+                satellites: []
+            },
+            { 
+                name: "Меркурий", 
+                radius: 5, 
+                distance: 60, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.04, 
+                color: "#B0B0B0",
+                satellites: []
+            },
+            { 
+                name: "Венера", 
+                radius: 8, 
+                distance: 90, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.015, 
+                color: "#E6BC73",
+                satellites: []
+            },
+            { 
+                name: "Земля", 
+                radius: 9, 
+                distance: 130, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.01, 
+                color: "#6B93D6",
+                satellites: [
+                    { 
+                        name: "Луна", 
+                        radius: 3, 
+                        distance: 20, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.05, 
+                        color: "#C0C0C0"
+                    }
+                ]
+            },
+            { 
+                name: "Марс", 
+                radius: 7, 
+                distance: 170, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.008, 
+                color: "#C1440E",
+                satellites: [
+                    { 
+                        name: "Фобос", 
+                        radius: 1.5, 
+                        distance: 12, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.08, 
+                        color: "#A0A0A0"
+                    },
+                    { 
+                        name: "Деймос", 
+                        radius: 1, 
+                        distance: 18, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.06, 
+                        color: "#808080"
+                    }
+                ]
+            },
+            { 
+                name: "Юпитер", 
+                radius: 20, 
+                distance: 240, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.005, 
+                color: "#D8CA9D",
+                satellites: [
+                    { 
+                        name: "Ио", 
+                        radius: 2, 
+                        distance: 28, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.04, 
+                        color: "#FFFF99"
+                    },
+                    { 
+                        name: "Европа", 
+                        radius: 2, 
+                        distance: 35, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.035, 
+                        color: "#87CEEB"
+                    },
+                    { 
+                        name: "Ганимед", 
+                        radius: 2.5, 
+                        distance: 42, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.03, 
+                        color: "#A9A9A9"
+                    },
+                    { 
+                        name: "Каллисто", 
+                        radius: 2.2, 
+                        distance: 50, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.025, 
+                        color: "#696969"
+                    }
+                ]
+            },
+            { 
+                name: "Сатурн", 
+                radius: 18, 
+                distance: 300, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.004, 
+                color: "#C5AB6E",
+                satellites: [
+                    { 
+                        name: "Титан", 
+                        radius: 3, 
+                        distance: 35, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.02, 
+                        color: "#FFA500"
+                    }
+                ]
+            },
+            { 
+                name: "Уран", 
+                radius: 12, 
+                distance: 350, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.003, 
+                color: "#D1E7E7",
+                satellites: [
+                    { 
+                        name: "Титания", 
+                        radius: 2, 
+                        distance: 25, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.025, 
+                        color: "#B0C4DE"
+                    }
+                ]
+            },
+            { 
+                name: "Нептун", 
+                radius: 12, 
+                distance: 400, 
+                angle: Math.random() * Math.PI * 2, 
+                speed: 0.002, 
+                color: "#5B5DDF",
+                satellites: [
+                    { 
+                        name: "Тритон", 
+                        radius: 2.5, 
+                        distance: 28, 
+                        angle: Math.random() * Math.PI * 2, 
+                        speed: 0.03, 
+                        color: "#4169E1"
+                    }
+                ]
+            }
+        ];
+        
+        // Добавим кольца Сатурна
+        const saturnRings = {
+            innerRadius: 22,
+            outerRadius: 35,
+            color: "rgba(210, 180, 140, 0.7)"
+        };
+        
+        // Обработчики кнопок
+        document.getElementById('speedUp').addEventListener('click', () => {
+            animationSpeed = Math.min(animationSpeed + 0.25, 5);
+            updateScaleInfo();
+        });
+        
+        document.getElementById('speedDown').addEventListener('click', () => {
+            animationSpeed = Math.max(animationSpeed - 0.25, 0.1);
+            updateScaleInfo();
+        });
+        
+        document.getElementById('toggleOrbits').addEventListener('click', function() {
+            showOrbits = !showOrbits;
+            this.textContent = showOrbits ? "Траектории: Вкл" : "Траектории: Выкл";
+        });
+        
+        document.getElementById('toggleLabels').addEventListener('click', function() {
+            showLabels = !showLabels;
+            this.textContent = showLabels ? "Названия: Вкл" : "Названия: Выкл";
+        });
+        
+        document.getElementById('resetView').addEventListener('click', () => {
+            scale = 1;
+            offsetX = 0;
+            offsetY = 0;
+            updateScaleInfo();
+        });
+        
+        // Обработчик слайдера яркости траекторий
+        document.getElementById('orbitBrightness').addEventListener('input', (e) => {
+            orbitBrightness = parseInt(e.target.value);
+        });
+        
+        function updateScaleInfo() {
+            document.getElementById('scaleInfo').textContent = `Скорость: ${animationSpeed.toFixed(2)}x`;
+        }
+        
+        // Функция для рисования звездного фона
+        function drawStars() {
+            // Создаем фиксированный набор звезд
+            if (!window.stars) {
+                window.stars = [];
+                for (let i = 0; i < 300; i++) {
+                    window.stars.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        radius: Math.random() * 1.5,
+                        opacity: Math.random() * 0.8 + 0.2
+                    });
+                }
+            }
+            
+            window.stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.fill();
+            });
+        }
+        
+        // Функция для рисования орбиты
+        function drawOrbit(distance) {
+            if (!showOrbits || distance === 0) return;
+            
+            const alpha = Math.min(0.8, orbitBrightness / 10);
+            ctx.beginPath();
+            ctx.arc(centerX + offsetX, centerY + offsetY, distance * scale, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(100, 150, 255, ${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        
+        // Функция для рисования планеты
+        function drawPlanet(planet) {
+            const x = (centerX + offsetX) + Math.cos(planet.angle) * planet.distance * scale;
+            const y = (centerY + offsetY) + Math.sin(planet.angle) * planet.distance * scale;
+            
+            // Проверяем, находится ли планета в пределах холста
+            if (x < -50 || x > canvas.width + 50 || 
+                y < -50 || y > canvas.height + 50) {
+                return {x, y}; // Не рисуем, если вне поля зрения
+            }
+            
+            // Рисуем планету
+            ctx.beginPath();
+            ctx.arc(x, y, planet.radius * scale, 0, Math.PI * 2);
+            ctx.fillStyle = planet.color;
+            ctx.fill();
+            
+            // Для Сатурна рисуем кольца
+            if (planet.name === "Сатурн") {
+                ctx.beginPath();
+                ctx.ellipse(x, y, saturnRings.outerRadius * scale, saturnRings.outerRadius/2 * scale, planet.angle, 0, Math.PI * 2);
+                ctx.strokeStyle = saturnRings.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.ellipse(x, y, saturnRings.innerRadius * scale, saturnRings.innerRadius/2 * scale, planet.angle, 0, Math.PI * 2);
+                ctx.strokeStyle = saturnRings.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            // Рисуем название планеты
+            if (showLabels && planet.radius * scale > 4) {
+                ctx.fillStyle = "white";
+                ctx.font = `${Math.max(10, planet.radius * scale/1.5)}px Arial`;
+                ctx.textAlign = "center";
+                ctx.fillText(planet.name, x, y - planet.radius * scale - 10);
+            }
+            
+            // Рисуем спутники
+            planet.satellites.forEach(satellite => {
+                // Спутники вращаются вокруг планеты
+                const satX = x + Math.cos(satellite.angle) * satellite.distance * scale;
+                const satY = y + Math.sin(satellite.angle) * satellite.distance * scale;
+                
+                // Проверяем, находится ли спутник в пределах холста
+                if (satX > -30 && satX < canvas.width + 30 && 
+                    satY > -30 && satY < canvas.height + 30) {
+                    
+                    // Рисуем орбиту спутника
+                    if (showOrbits) {
+                        const alpha = Math.min(0.5, orbitBrightness / 15);
+                        ctx.beginPath();
+                        ctx.arc(x, y, satellite.distance * scale, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(200, 200, 255, ${alpha})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                    
+                    // Рисуем спутник
+                    ctx.beginPath();
+                    ctx.arc(satX, satY, satellite.radius * scale, 0, Math.PI * 2);
+                    ctx.fillStyle = satellite.color;
+                    ctx.fill();
+                    
+                    // Рисуем название спутника
+                    if (showLabels && satellite.radius * scale > 1.5 && satellite.name) {
+                        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                        ctx.font = `${Math.max(8, satellite.radius * scale)}px Arial`;
+                        ctx.textAlign = "center";
+                        ctx.fillText(satellite.name, satX, satY - satellite.radius * scale - 8);
+                    }
+                }
+            });
+            
+            return {x, y};
+        }
+        
+        // Обработчики событий мыши для масштабирования и перемещения
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomIntensity = 0.1;
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+            
+            // Сохраняем текущие координаты центра относительно сцены
+            const worldX = (mouseX - (centerX + offsetX)) / scale;
+            const worldY = (mouseY - (centerY + offsetY)) / scale;
+            
+            // Изменяем масштаб
+            if (e.deltaY < 0) {
+                scale *= (1 + zoomIntensity);
+            } else {
+                scale *= (1 - zoomIntensity);
+                scale = Math.max(0.1, scale); // Минимальный масштаб
+            }
+            
+            // Обновляем позицию, чтобы масштабирование происходило относительно курсора
+            offsetX = mouseX - centerX - worldX * scale;
+            offsetY = mouseY - centerY - worldY * scale;
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.clientX - lastX;
+                const dy = e.clientY - lastY;
+                offsetX += dx;
+                offsetY += dy;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'move';
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            canvas.style.cursor = 'default';
+        });
+        
+        // Основная функция анимации
+        function animate() {
+            // Очищаем холст
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Рисуем звезды
+            drawStars();
+            
+            // Рисуем орбиты планет
+            planets.forEach(planet => {
+                drawOrbit(planet.distance);
+            });
+            
+            // Рисуем планеты и спутники
+            planets.forEach(planet => {
+                drawPlanet(planet);
+                
+                // Обновляем угол планеты
+                if (planet.speed > 0) {
+                    planet.angle += planet.speed * animationSpeed;
+                }
+                
+                // Обновляем углы спутников
+                planet.satellites.forEach(satellite => {
+                    satellite.angle += satellite.speed * animationSpeed;
+                });
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Инициализация
+        updateScaleInfo();
+        
+        // Запускаем анимацию
+        animate();
+    </script>
+</body>
+</html>
